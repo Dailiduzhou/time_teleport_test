@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="left-down" width="45" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="6">
+ <tileset firstgid="1" source="floor.tsx"/>
+ <layer id="1" name="Past_Art" width="45" height="45">
+  <data encoding="base64" compression="zlib">
+   eJzt0rENgCAQRmE7dQh1CHU7XUIX9m9IrhEoDhLC+5ILJFA9GAYAAAAAAAAA6MuluSusnh7NW2H1RGc6/+m186iZNHPkniePjotm1WyRe548Ou+aQ3NG7nny6Gz/Riud7d9opbP9GzU623fN2YduqfOSne275uxDt9R5yc72XXP2oVvqvGTnD34vsGc=
+  </data>
+ </layer>
+ <objectgroup id="2" name="Past_Col">
+  <object id="1" x="0" y="672" width="192" height="48"/>
+  <object id="2" x="224" y="672" width="96" height="48"/>
+  <object id="3" x="272" y="576" width="48" height="96"/>
+ </objectgroup>
+ <layer id="3" name="Future_Art" width="45" height="45">
+  <data encoding="base64" compression="zlib">
+   eJzt0LENgDAMRNF0wBBAEyYAGth/L65xaWMpkqv/pFNcpPqtAQAAAAAAAP+6dhS/ox7tLX5H0ZnOHjrT2UNnOnvoTGcPnWs6T9qsLcFtfTJ/Kzqv2qbtwW19Mn8rOp/apd3BbX0yfys6fy0WYgo=
+  </data>
+ </layer>
+ <objectgroup id="4" name="Future_Col">
+  <object id="4" x="0" y="672" width="144" height="48"/>
+  <object id="5" x="176" y="672" width="144" height="48"/>
+ </objectgroup>
+</map>
