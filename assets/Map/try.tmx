@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="left-down" width="45" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="4" nextobjectid="6">
+ <tileset firstgid="1" source="asset.tsx"/>
+ <layer id="1" name="map" width="45" height="45">
+  <data encoding="base64" compression="zlib">
+   eJztkksKhEAMBd2ph3A8hHq79hJ6Yd8ym/5Ah0AzVfBIIFlVMk0AAAAAAAAAAGOTlDugevIob0D1BM94zoFnPOfAM55z/KPnWVmUtbLnSa+/Tfkpe2XPk17Ph3IqV2XPk17P9jdG8Wx/YxTP9jeiPNvbtvSpMIvybG/b0j+FWZRne9uWPhVmUZ4/Lh8DDg==
+  </data>
+ </layer>
+ <objectgroup id="3" name="map_Col">
+  <object id="1" x="0" y="672" width="192" height="48"/>
+  <object id="2" x="208" y="672" width="96" height="48"/>
+  <object id="4" x="256" y="576" width="48" height="96"/>
+ </objectgroup>
+</map>
