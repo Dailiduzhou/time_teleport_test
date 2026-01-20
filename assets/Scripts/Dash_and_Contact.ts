@@ -35,7 +35,7 @@ export class PlayerController extends Component {
     coyoteTime: number = 0.1;
 
     @property({ group: "gameplay"})
-    minYThreshold: number = -100;
+    minYThreshold: number = -400;
 
     @property(TimeTravelManager)
     timeTravelManager: TimeTravelManager = null;
