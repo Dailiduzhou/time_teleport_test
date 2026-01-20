@@ -1,7 +1,7 @@
 import { _decorator, Component, Node, TiledMap, RigidBody2D, BoxCollider2D, ERigidBody2DType, Size, v3, PhysicsSystem2D, EPhysics2DDrawFlags, UIOpacity, UITransform } from 'cc';
 const { ccclass, property } = _decorator;
 
-const GROUP_LEVEL = 1;
+const GROUP_LEVEL = 1 << 2;
 
 export enum TimeState {
     Past,

@@ -1,5 +1,5 @@
 import { _decorator, Component, Node, input, Input, KeyCode, EventKeyboard, RigidBody2D, Vec2, Collider2D, Contact2DType, IPhysics2DContact, Vec3, PhysicsSystem2D, BoxCollider2D } from 'cc';
-// import { LevelMapManager } from './LevelMapManager';
+import { TimeTravelManager } from './TimeTravelManager';
 const { ccclass, property } = _decorator;
 
 const GROUP_PLAYER_PAST   = 1 << 1; // 2
@@ -18,8 +18,8 @@ export class PlayerController extends Component {
     @property({ tooltip: '土狼时间（秒）：离开平台后多少秒内仍可跳跃' })
     coyoteTimeDuration: number = 0.1;
 
-    // @property(LevelMapManager)
-    // public mapManager: LevelMapManager = null;
+    @property(TimeTravelManager)
+    timeTravelManager: TimeTravelManager = null;
     // 内部状态
     private rigidBody: RigidBody2D = null;
     private collider: Collider2D = null;
@@ -47,11 +47,9 @@ export class PlayerController extends Component {
         input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         input.on(Input.EventType.KEY_UP, this.onKeyUp, this);
 
-        // if (this.mapManager) {
-        //     // this.mapManager.init();
-        // } else {
-        //     console.warn("mapManager 未绑定 LevelMapManager");
-        // }
+        if (!this.timeTravelManager) {
+            console.warn("未绑定 TimeTravelManager");
+        }
 
     }
 
@@ -117,6 +115,10 @@ export class PlayerController extends Component {
             // --- 跳跃 (J) ---
             case KeyCode.KEY_J:
                 this.tryJump();
+                break;
+
+            case KeyCode.SHIFT_LEFT:
+                this.timeTravelManager.tryTimeTravel();
                 break;
         }
     }
