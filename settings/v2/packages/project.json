@@ -15,6 +15,9 @@
       "0": 7,
       "1": 7,
       "2": 7
+    },
+    "gravity": {
+      "y": -30
     }
   },
   "custom_joint_texture_layouts": []
