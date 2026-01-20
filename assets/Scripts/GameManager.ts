@@ -13,7 +13,7 @@ export class GameManager {
     }
 
     public currentCheckpointPos: Vec3 | null = null;
-    public defaultSpawnPos: Vec3 = new Vec3(-585, -270, 0);
+    public defaultSpawnPos: Vec3 = new Vec3(100, 100, 0);
 
     public saveCheckpoint(pos: Vec3) {
         // 克隆坐标防止引用问题

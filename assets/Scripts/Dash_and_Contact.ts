@@ -35,7 +35,7 @@ export class PlayerController extends Component {
     coyoteTime: number = 0.1;
 
     @property({ group: "gameplay"})
-    minYThreshold: number = -400;
+    minYThreshold: number = -50;
 
     @property(TimeTravelManager)
     timeTravelManager: TimeTravelManager = null;
@@ -82,7 +82,7 @@ export class PlayerController extends Component {
     update(dt: number) {
         if (this.isDead) return;
 
-        if (this.node.position.y < this.minYThreshold){
+        if (this.node.getWorldPosition().y < this.minYThreshold){
             console.log("因为掉落，立即执行死亡逻辑: CurY=" + this.node.position.y);
             this.die();
             return;
@@ -126,7 +126,7 @@ export class PlayerController extends Component {
         const gm = GameManager.instance;
         const targetPos = gm.currentCheckpointPos ? gm.currentCheckpointPos : gm.defaultSpawnPos;
 
-        this.node.setPosition(targetPos);
+        this.node.setWorldPosition(targetPos);
         this.isDead = false;
         
         const rb = this.getComponent(RigidBody2D);
