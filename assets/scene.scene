@@ -1010,19 +1010,33 @@
         "__id__": 55
       }
     ],
-    "_prefab": null,
-    "_lpos": {
+    "value": {
       "__type__": "cc.Vec3",
       "x": -586.328,
       "y": -239.776,
       "z": 0
+    }
+  },
+  {
+    "__type__": "CCPropertyOverrideInfo",
+    "targetInfo": {
+      "__id__": 37
     },
-    "_lrot": {
+    "propertyPath": [
+      "_lrot"
+    ],
+    "value": {
       "__type__": "cc.Quat",
       "x": 0,
       "y": 0,
       "z": 0,
       "w": 1
+    }
+  },
+  {
+    "__type__": "CCPropertyOverrideInfo",
+    "targetInfo": {
+      "__id__": 37
     },
     "_lscale": {
       "__type__": "cc.Vec3",
