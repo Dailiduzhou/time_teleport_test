@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, TiledMap, RigidBody2D, BoxCollider2D, ERigidBody2DType, Size, v3, PhysicsSystem2D, EPhysics2DDrawFlags, UIOpacity, UITransform } from 'cc';
+import { _decorator, Component, Node, TiledMap, RigidBody2D, BoxCollider2D, ERigidBody2DType, Size, v3, PhysicsSystem2D, EPhysics2DDrawFlags, UIOpacity, UITransform, Prefab, instantiate } from 'cc';
 const { ccclass, property } = _decorator;
 
 const GROUP_LEVEL = 1 << 2;
@@ -15,6 +15,9 @@ export class LevelMapManager extends Component {
 
     @property({ tooltip: "淡入淡出耗时(秒)" })
     fadeDuration: number = 0.5;
+
+    @property({ type: Prefab, tooltip: "存档点预制体"})
+    checkpointPrefab: Prefab = null;
 
     // 用来存储生成的碰撞体父节点，方便整体开关
     private pastColRoot: Node = null;
@@ -76,10 +79,84 @@ export class LevelMapManager extends Component {
             console.warn("未找到 Past_Art 或 Future_Art 图层，请检查 Tiled 图层名");
         }
 
+        this.spawnCheckpoints("Checkpoints");
+
         // 3. 初始化状态（默认进入过去）
         this.switchTime(TimeState.Past);
 
         console.log("地图重组与初始化完成");
+    }
+
+    private spawnCheckpoints(layerName: string) {
+        if (!this.checkpointPrefab) {
+            console.warn("未设置");
+            return;
+        }
+
+        const objectGroup = this.tiledMap.getObjectGroup(layerName);
+        if (!objectGroup) {
+            console.log(`[Info] 未找到名为${layerName} 的对象层`);
+            return;
+        }
+
+        const cpRoot = new Node(layerName + "_Root");
+        this.tiledMap.node.addChild(cpRoot);
+
+        const objects = objectGroup.getObjects();
+        const mapSize = this.tiledMap.getMapSize();
+        const tileSize = this.tiledMap.getTileSize();
+
+         if (!mapSize || !tileSize) {
+            console.error("无法获取 MapSize 或 TileSize，请检查 TMX 资源");
+            return;
+        }
+
+        const totalW = mapSize.width * tileSize.width;
+        const totalH = mapSize.height * tileSize.height;
+        const halfW = totalW / 2;
+        const halfH = totalH / 2;
+
+        for (const object of objects){
+            const cpNode = instantiate(this.checkpointPrefab);
+            cpRoot.addChild(cpNode);
+            cpNode.name = object.name || "Checkpoint";
+
+            if (object.type && String(object.type) === "checkpoint") {
+                const w = object.width;
+                const h = object.height;
+                const tiledX = object.x; 
+                const tiledY = object.y;
+
+            if (typeof w !== 'number' || typeof h !== 'number' || typeof tiledX !== 'number' || typeof tiledY !== 'number') {
+                console.warn(`[Error Data] 对象 ${object.name || 'Unknown'} 数据不完整，跳过。`, object);
+                continue;
+            }
+
+            // 如果你想直接丢弃 0 尺寸对象（推荐）：
+            if (w <= 0 || h <= 0) {
+               console.warn(`[Invalid Size] 对象 ${object.name} 尺寸为 0，已丢弃。`);
+               continue;
+            }
+
+            // 使用之前验证通过的中心锚点(0.5, 0.5)公式
+            const finalX = -halfW + tiledX + (w / 2);
+            const finalY = -halfH + tiledY - (h / 2);
+
+            if (Number.isNaN(finalX) || Number.isNaN(finalY)) {
+                console.error(`[Math Error] 对象 ${object.name} 坐标计算结果为 NaN！`, { tiledX, tiledY, w, h });
+                continue; // 绝对不要把 NaN 传给 setPosition
+            }
+
+            cpNode.setPosition(v3(finalX, finalY, 0));
+
+            // 处理拉伸Checkpoint的碰撞箱尺寸(报错就改)
+            const collider = cpNode.getComponent(BoxCollider2D);
+                if (collider && w > 0 && h > 0) {
+                     collider.size = new Size(w, h);
+                     collider.apply(); // 刷新
+                }
+            }
+        }
     }
 
     private ensureOpacity(node: Node): UIOpacity {
@@ -166,8 +243,6 @@ export class LevelMapManager extends Component {
                 console.warn(`[Error Data] 对象 ${object.name || 'Unknown'} 数据不完整，跳过。`, object);
                 continue;
             }
-
-            
 
             // 如果你想直接丢弃 0 尺寸对象（推荐）：
             if (w <= 0 || h <= 0) {
