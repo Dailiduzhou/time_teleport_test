@@ -1,5 +1,5 @@
 import { _decorator, Component, Node, input, Input, KeyCode, EventKeyboard, RigidBody2D, Vec2, Collider2D, Contact2DType, IPhysics2DContact, Vec3, PhysicsSystem2D, BoxCollider2D } from 'cc';
-import { LevelMapManager } from './LevelMapManager';
+// import { LevelMapManager } from './LevelMapManager';
 const { ccclass, property } = _decorator;
 
 const GROUP_PLAYER_PAST   = 1 << 1; // 2
@@ -18,8 +18,8 @@ export class PlayerController extends Component {
     @property({ tooltip: '土狼时间（秒）：离开平台后多少秒内仍可跳跃' })
     coyoteTimeDuration: number = 0.1;
 
-    @property(LevelMapManager)
-    public mapManager: LevelMapManager = null;
+    // @property(LevelMapManager)
+    // public mapManager: LevelMapManager = null;
     // 内部状态
     private rigidBody: RigidBody2D = null;
     private collider: Collider2D = null;
@@ -47,11 +47,11 @@ export class PlayerController extends Component {
         input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         input.on(Input.EventType.KEY_UP, this.onKeyUp, this);
 
-        if (this.mapManager) {
-            // this.mapManager.init();
-        } else {
-            console.warn("mapManager 未绑定 LevelMapManager");
-        }
+        // if (this.mapManager) {
+        //     // this.mapManager.init();
+        // } else {
+        //     console.warn("mapManager 未绑定 LevelMapManager");
+        // }
 
     }
 
@@ -74,13 +74,13 @@ export class PlayerController extends Component {
 
         console.log(`【PlayerDebug】玩家初始分组: ${collider.group} (二进制: ${collider.group.toString(2)})`);
         
-        const mapNode = this.mapManager.tiledMap.node;
-        this.node.setParent(mapNode);
+        // const mapNode = this.mapManager.tiledMap.node;
+        // this.node.setParent(mapNode);
+        // // this.node.setPosition(-200, 200, 0);
         // this.node.setPosition(-200, 200, 0);
-        this.node.setPosition(-200, 200, 0);
-        console.log("Player world:", this.node.worldPosition);
+        // console.log("Player world:", this.node.worldPosition);
 
-        console.log("Body type:", this.rigidBody.type, "gravity:", this.rigidBody.gravityScale);
+        // console.log("Body type:", this.rigidBody.type, "gravity:", this.rigidBody.gravityScale);
     }
 
     onDestroy() {

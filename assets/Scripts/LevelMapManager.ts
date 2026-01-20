@@ -1,7 +1,7 @@
-import { _decorator, Component, Node, TiledMap, RigidBody2D, BoxCollider2D, ERigidBody2DType, Size, v3, PhysicsSystem2D, EPhysics2DDrawFlags, UIOpacity } from 'cc';
+import { _decorator, Component, Node, TiledMap, RigidBody2D, BoxCollider2D, ERigidBody2DType, Size, v3, PhysicsSystem2D, EPhysics2DDrawFlags, UIOpacity, UITransform } from 'cc';
 const { ccclass, property } = _decorator;
 
-const GROUP_LEVEL = 1 << 2;
+const GROUP_LEVEL = 1;
 
 export enum TimeState {
     Past,
@@ -36,35 +36,18 @@ export class LevelMapManager extends Component {
             this.tiledMap = this.getComponent(TiledMap);
         }
 
+        const scale = this.tiledMap.node.scale;
+        if (scale.x <= 0 || scale.y <= 0) {
+            console.error(`[严重错误] TiledMap 节点的 Scale 必须是正数！当前: ${scale}`);
+            console.error("Box2D 不支持负缩放，请在 Inspector 中把 Scale 改回 (1, 1, 1)，利用代码修正翻转问题。");
+            return; // 阻止后续运行，防止崩溃
+        }
+
         PhysicsSystem2D.instance.debugDrawFlags = EPhysics2DDrawFlags.Aabb |
             EPhysics2DDrawFlags.Pair |
             EPhysics2DDrawFlags.CenterOfMass |
             EPhysics2DDrawFlags.Joint |
             EPhysics2DDrawFlags.Shape;
-
-        
-
-        // if (!pastLayer || !futureLayer) {
-        //     console.warn("未找到 Past_Art 或 Future_Art 图块层，请检查 .tmx 图层名");
-        //     return;
-        // }
-        
-
-        // const mapLayer = this.tiledMap.getLayer("map");
-        // this.MapRoot = this.tiledMap.node;
-        // if (!mapLayer){
-        //     console.warn('找不到map');
-        // }
-
-        // this.MapRoot = this.tiledMap.node;
-        // this.MapRoot.layer = this.node.layer;
-        // this.MapRoot.setPosition(0, 0, 0);
-        // console.log(`【MapDebug】当前节点 Layer: ${this.node.layer}`);
-        // console.log("TiledMap world:", this.tiledMap.node.worldPosition);
-        // console.log("MapLayer world:", mapLayer.node.worldPosition);
-
-
-        // console.log(`【MapDebug】PastRoot Layer: ${this.pastRoot.layer}, Position: ${this.pastRoot.position}`);
 
         this.pastColRoot = this.generateColliders("Past_Col", GROUP_LEVEL);
         this.futureColRoot = this.generateColliders("Future_Col", GROUP_LEVEL);
@@ -126,17 +109,26 @@ export class LevelMapManager extends Component {
 
         // 创建一个独立的父节点来管理这组碰撞体
         const rootNode = new Node(layerName + "_Root");
+        rootNode.active = false;
+        rootNode.addComponent(UITransform);
         this.tiledMap.node.addChild(rootNode);
 
         // 准备坐标计算参数
         const objects = objectGroup.getObjects();
         const mapSize = this.tiledMap.getMapSize();
         const tileSize = this.tiledMap.getTileSize();
+
+        if (!mapSize || !tileSize) {
+            console.error("无法获取 MapSize 或 TileSize，请检查 TMX 资源");
+            return rootNode;
+        }
+
         const totalW = mapSize.width * tileSize.width;
         const totalH = mapSize.height * tileSize.height;
         const halfW = totalW / 2;
         const halfH = totalH / 2;
 
+        console.log(`[MapDebug] Layer:${layerName} W:${totalW} H:${totalH}`);
 
         for (const object of objects) {
             const colliderNode = new Node();
