@@ -54,8 +54,20 @@ export class LevelMapManager extends Component {
         if (this.pastColRoot) this.pastColRoot.active = false;
         if (this.futureColRoot) this.futureColRoot.active = false;
 
-        this.pastArtLayer = this.tiledMap.node.getChildByName("Past_Art");
-        this.futureArtLayer = this.tiledMap.node.getChildByName("Future_Art");
+        // this.pastArtLayer = this.tiledMap.node.getChildByName("Past_Art");
+        // this.futureArtLayer = this.tiledMap.node.getChildByName("Future_Art");
+        const pastLayerComp = this.tiledMap.getLayer("Past_Art");
+        const futureLayerComp = this.tiledMap.getLayer("Future_Art");
+        if (pastLayerComp) {
+            this.pastArtLayer = pastLayerComp.node;
+        } else {
+            console.error("【严重错误】TiledMap 中找不到名为 'Past_Art' 的图层！请检查 Tiled 编辑器中的图层名。");
+        }
+        if (futureLayerComp) {
+            this.futureArtLayer = futureLayerComp.node;
+        } else {
+            console.error("【严重错误】TiledMap 中找不到名为 'Future_Art' 的图层！请检查 Tiled 编辑器中的图层名。");
+        }
 
         this.pastOpacity = this.ensureOpacity(this.pastArtLayer);
         this.futureOpacity = this.ensureOpacity(this.futureArtLayer);
@@ -85,10 +97,18 @@ export class LevelMapManager extends Component {
     }
 
     public switchTime(state: TimeState) {
+        console.log(`[Debug Scope] this.name: ${this ? this.name : "undefined"}, this类型: ${this ? this.constructor.name : "N/A"}`);
+
         this.currentState = state;
         const isPast = state === TimeState.Past;
 
         console.log(`[TimeSwitch] 切换到: ${isPast ? "过去 (Past)" : "未来 (Future)"}`);
+
+        if (this.pastArtLayer) {
+            console.log(`设置 Past_Art 显隐: ${isPast}, 当前节点 Active: ${this.pastArtLayer.active}`);
+        } else {
+            console.error("switchTime 失败: pastArtLayer 引用为空！");
+        }
 
         // 核心逻辑：通过 active 控制显隐和碰撞生效
         // 1. 处理碰撞体
@@ -178,61 +198,4 @@ export class LevelMapManager extends Component {
 
         return rootNode;
     }
-
-    private addCollision() {
-        const collisionGroup = this.tiledMap.getObjectGroup("map_Col");
-        if (!collisionGroup) return;
-
-        const objects = collisionGroup.getObjects();
-        const mapSize = this.tiledMap.getMapSize();
-        const tileSize = this.tiledMap.getTileSize();
-
-        // 1. 获取地图总像素宽高
-        const totalW = mapSize.width * tileSize.width;
-        const totalH = mapSize.height * tileSize.height;
-
-        // 2. 这里的 Anchor 必须是 (0.5, 0.5)，如果是其他值，此公式需要调整
-        // 我们利用半宽和半高来建立坐标系：
-        // Cocos 的 (0,0) 在地图中心
-        // Top    (顶边) Y = +totalH / 2
-        // Bottom (底边) Y = -totalH / 2
-        // Left   (左边) X = -totalW / 2
-        // Right  (右边) X = +totalW / 2
-        const halfW = totalW / 2;
-        const halfH = totalH / 2;
-
-        for (const object of objects) {
-            const colliderNode = new Node();
-            colliderNode.name = object.name || "Collider";
-            
-            // 重要：添加到 TiledMap 节点下，这样我们只关心本地坐标，父节点的世界坐标在哪里都不影响
-            this.tiledMap.node.addChild(colliderNode);
-
-            const w = object.width;
-            const h = object.height;
-            const tiledX = object.x; 
-            const tiledY = object.y;
-
-            // --- 核心坐标公式 ---
-
-            // X轴：Tiled 原点在左边(0)。Cocos 原点在中间(0)。
-            // 转换：先移到最左边 (-halfW)，再向右加 TiledX，再向右加半个物体宽(中心修正)
-            const finalX = -halfW + tiledX + (w / 2);
-            const finalY = -halfH + tiledY - (h / 2);
-
-            console.log(`Wall Position: x=${finalX}, y=${finalY}`);
-            colliderNode.setPosition(v3(finalX, finalY, 0));
-
-            // --- 物理组件 ---
-            const rb = colliderNode.addComponent(RigidBody2D);
-            rb.type = ERigidBody2DType.Static;
-            
-            const collider = colliderNode.addComponent(BoxCollider2D);
-            collider.size = new Size(w, h);
-            collider.group = 1; 
-        }
-    }
 }
-
-
-
