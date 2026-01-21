@@ -7,7 +7,7 @@
    eJztlLENgDAMBJ0JgAYmABrYfzagicsvkgYkSxZ30ivfQHG2bAYAAAAAAAAAAADwnrmYLSX2/crh/zhL7ItnPOP5n54v//b2PJbH8+AZPVMiz6tn8+yJ9ll3I4tn3Y0snnU3oj3rjLW37kOvR3vWGWtv3Ydej/asM9beug+9Hu25Au+uTn0=
   </data>
  </layer>
- <objectgroup id="9" name="Checkpoints">
+ <objectgroup id="9" name="Objects">
   <object id="13" name="checkpoint" type="checkpoint" x="224" y="480" width="32" height="48"/>
  </objectgroup>
  <objectgroup id="6" name="Past_Col">

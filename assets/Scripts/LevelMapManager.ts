@@ -19,6 +19,9 @@ export class LevelMapManager extends Component {
     @property({ type: Prefab, tooltip: "存档点预制体"})
     checkpointPrefab: Prefab = null;
 
+    @property({ type: Prefab, tooltip: "尖刺预制体"})
+    spikePrefab: Prefab = null!;
+
     // 用来存储生成的碰撞体父节点，方便整体开关
     private pastColRoot: Node = null;
     private futureColRoot: Node = null;
@@ -32,6 +35,11 @@ export class LevelMapManager extends Component {
 
     private currentState: TimeState = TimeState.Past;
     private isFading: boolean = false;
+
+    private readonly OBJ_TYPE = {
+        CHECKPOINT: "checkpoint",
+        SPIKE: "spike"
+    };
 
     start() {
         if (!this.tiledMap) {
@@ -79,7 +87,7 @@ export class LevelMapManager extends Component {
             console.warn("未找到 Past_Art 或 Future_Art 图层，请检查 Tiled 图层名");
         }
 
-        this.spawnCheckpoints("Checkpoints");
+        this.spawnPrefbs("Objects");
 
         // 3. 初始化状态（默认进入过去）
         this.switchTime(TimeState.Past);
@@ -87,20 +95,15 @@ export class LevelMapManager extends Component {
         console.log("地图重组与初始化完成");
     }
 
-    private spawnCheckpoints(layerName: string) {
-        if (!this.checkpointPrefab) {
-            console.warn("未设置");
-            return;
-        }
-
+    private spawnPrefbs(layerName: string) {
         const objectGroup = this.tiledMap.getObjectGroup(layerName);
         if (!objectGroup) {
             console.log(`[Info] 未找到名为${layerName} 的对象层`);
             return;
         }
 
-        const cpRoot = new Node(layerName + "_Root");
-        this.tiledMap.node.addChild(cpRoot);
+        const objectsRoot = new Node(layerName + "_Root");
+        this.tiledMap.node.addChild(objectsRoot);
 
         const objects = objectGroup.getObjects();
         const mapSize = this.tiledMap.getMapSize();
@@ -117,17 +120,15 @@ export class LevelMapManager extends Component {
         const halfH = totalH / 2;
 
         for (const object of objects){
-            console.log(`[TiledDebug] 发现对象 Name: ${object.name}, Type: ${object.type}`);
-            const cpNode = instantiate(this.checkpointPrefab);
-            cpRoot.addChild(cpNode);
-            cpNode.name = object.name || "Checkpoint";
-            const name = object.name ? String(object.name).toLowerCase() : "";
-
-            if (name === "checkpoint") {
-                const w = object.width;
-                const h = object.height;
-                const tiledX = object.x; 
-                const tiledY = object.y;
+            const rawName = object.name || "Unknown";
+            const name = rawName.toLowerCase();
+            
+            console.log(`[TiledDebug] 发现对象 Name: ${rawName}, Type: ${object.type}`);
+            
+            const w = object.width;
+            const h = object.height;
+            const tiledX = object.x; 
+            const tiledY = object.y;
 
             if (typeof w !== 'number' || typeof h !== 'number' || typeof tiledX !== 'number' || typeof tiledY !== 'number') {
                 console.warn(`[Error Data] 对象 ${object.name || 'Unknown'} 数据不完整，跳过。`, object);
@@ -140,6 +141,26 @@ export class LevelMapManager extends Component {
                continue;
             }
 
+            let targetPrefab: Prefab | null = null;
+            switch (name) {
+                case "checkpoint":
+                    if (!this.checkpointPrefab) {
+                        console.warn(`未绑定${name}预制体`);
+                        return;
+                    }
+                    targetPrefab = this.checkpointPrefab;
+                    break;
+                case "spike":
+                    if (!this.spikePrefab) {
+                        console.warn(`未绑定${name}预制体`);
+                        return;
+                    }
+                    targetPrefab = this.spikePrefab;
+                    break;
+                default:
+                    break;
+            }
+
             // 使用之前验证通过的中心锚点(0.5, 0.5)公式
             const finalX = -halfW + tiledX + (w / 2);
             const finalY = -halfH + tiledY - (h / 2);
@@ -149,20 +170,24 @@ export class LevelMapManager extends Component {
                 continue; // 绝对不要把 NaN 传给 setPosition
             }
 
+            const newNode = instantiate(targetPrefab);
+            objectsRoot.addChild(newNode);
 
-            console.log(`生成存档点 位置x:${finalX} y:${finalY}`)
-            cpNode.setPosition(v3(finalX, finalY, 0));
+            newNode.name = rawName;
+            newNode.setPosition(v3(finalX, finalY, 0));
+            console.log(`生成对象 [${rawName}] 位置 x:${finalX} y:${finalY}`);
 
             // 处理拉伸Checkpoint的碰撞箱尺寸(报错就改)
-            const collider = cpNode.getComponent(BoxCollider2D);
-                if (collider && w > 0 && h > 0) {
-                    collider.group = GROUP_LEVEL;
-                    let w = (object.width && object.width > 0) ? object.width : 64;
-                    let h = (object.height && object.height > 0) ? object.height : 64;
-                    collider.size = new Size(w, h);
-                    collider.apply(); // 刷新
-                }
+            const collider = newNode.getComponent(BoxCollider2D);
+            if (collider) {
+                // 设置分组 (假设 GROUP_LEVEL 是你的常量)
+                collider.group = GROUP_LEVEL; 
+                
+                // 设置尺寸
+                collider.size = new Size(w, h);
+                collider.apply(); 
             }
+            
         }
     }
 
