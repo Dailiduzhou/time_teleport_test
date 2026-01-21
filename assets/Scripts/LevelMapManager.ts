@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, TiledMap, RigidBody2D, BoxCollider2D, ERigidBody2DType, Size, v3, PhysicsSystem2D, EPhysics2DDrawFlags, UIOpacity, UITransform, Prefab, instantiate } from 'cc';
+import { _decorator, Component, Node, TiledMap, RigidBody2D, Collider2D, BoxCollider2D, ERigidBody2DType, Size, v3, PhysicsSystem2D, EPhysics2DDrawFlags, UIOpacity, UITransform, Prefab, instantiate } from 'cc';
 const { ccclass, property } = _decorator;
 
 const GROUP_LEVEL = 1 << 2;
@@ -195,20 +195,31 @@ export class LevelMapManager extends Component {
             objectsRoot.addChild(newNode);
 
             newNode.name = rawName;
+
+            const uiTransform = newNode.getComponent(UITransform);
+            // 设置默认值，防止组件丢失报错
+            let originalWidth = 100; 
+            let originalHeight = 100;
+            if (uiTransform && uiTransform.contentSize.width > 0) {
+                originalWidth = uiTransform.contentSize.width;
+                originalHeight = uiTransform.contentSize.height;
+            }
+
+            const scaleX = w / originalWidth;
+            const scaleY = h / originalHeight;
+
+            newNode.setScale(v3(scaleX, scaleY, 1));
+
             newNode.setPosition(v3(finalX, finalY, 0));
             console.log(`生成对象 [${rawName}] 位置 x:${finalX} y:${finalY}`);
 
             // 处理拉伸Checkpoint的碰撞箱尺寸(报错就改)
-            const collider = newNode.getComponent(BoxCollider2D);
+            const collider = newNode.getComponent(Collider2D);
             if (collider) {
                 // 设置分组 (假设 GROUP_LEVEL 是你的常量)
-                collider.group = GROUP_LEVEL; 
-                
-                // 设置尺寸
-                collider.size = new Size(w, h);
+                // collider.group = GROUP_LEVEL; 
                 collider.apply(); 
             }
-            
         }
     }
 
