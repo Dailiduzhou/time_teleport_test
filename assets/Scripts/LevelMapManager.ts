@@ -303,11 +303,8 @@ export class LevelMapManager extends Component {
                 continue;
             }
 
-<<<<<<< HEAD
-=======
+            
 
-
->>>>>>> origin/feature/LaserObstacle
             // 如果你想直接丢弃 0 尺寸对象（推荐）：
             if (w <= 0 || h <= 0) {
                 console.warn(`[Invalid Size] 对象 ${object.name} 尺寸为 0，已丢弃。`);
