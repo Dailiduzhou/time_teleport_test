@@ -1,6 +1,7 @@
 import { _decorator, Component, Node, Input, input, EventKeyboard, KeyCode, Vec2, RigidBody2D, v2, Collider2D, Contact2DType, IPhysics2DContact, misc, PhysicsSystem2D, math, BoxCollider2D } from 'cc';
 import { TimeTravelManager } from './TimeTravelManager';
 import { GameManager } from './GameManager';
+import { Hazard } from './Hazard';
 const { ccclass, property } = _decorator;
 
 @ccclass('PlayerController')
@@ -279,6 +280,13 @@ export class PlayerController extends Component {
 
     private onBeginContact(self: Collider2D, other: Collider2D, contact: IPhysics2DContact | null) {
         if (!contact) return;
+
+        if (other.getComponent(Hazard)) {
+            console.log("撞到了危险物！");
+            this.die();
+            return; // 死了就不用检测地面逻辑了
+        }
+
         if (this.isValidGroundNormal(contact, self)) {
             this.groundContactSet.add(other.uuid); 
             this.canDash = true; 
