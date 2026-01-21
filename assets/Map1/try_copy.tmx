@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="left-down" width="45" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="10" nextobjectid="14">
+ <tileset firstgid="1" source="floor.tsx"/>
+ <tileset firstgid="243" source="../Map/asset.tsx"/>
+ <layer id="5" name="Past_Art" width="45" height="45">
+  <data encoding="base64" compression="zlib">
+   eJztlLENgDAMBJ0JgAYmABrYfzagicsvkgYkSxZ30ivfQHG2bAYAAAAAAAAAAADwnrmYLSX2/crh/zhL7ItnPOP5n54v//b2PJbH8+AZPVMiz6tn8+yJ9ll3I4tn3Y0snnU3oj3rjLW37kOvR3vWGWtv3Ydej/asM9beug+9Hu25Au+uTn0=
+  </data>
+ </layer>
+ <objectgroup id="9" name="Checkpoints">
+  <object id="13" name="checkpoint" type="checkpoint" x="224" y="480" width="32" height="48"/>
+ </objectgroup>
+ <objectgroup id="6" name="Past_Col">
+  <object id="6" x="0" y="672" width="96" height="48"/>
+  <object id="7" x="128" y="672" width="144" height="48"/>
+  <object id="8" x="224" y="576" width="48" height="96"/>
+ </objectgroup>
+ <layer id="7" name="Future_Art" width="45" height="45">
+  <data encoding="base64" compression="zlib">
+   eJzt0LEJgEAMRuFkAnUIdTtdQodWG//mICdcpaSQ90G4QLjmmQEAAAAAAAD/tLjZ6vnvG5v+757/0pnOdKYznelMZzrT+dvOh+bUXI+99Gjd457dudP/XjN4vZcerXvcszuP+j9pZq/30qN1j3t25xsTuP4p
+  </data>
+ </layer>
+ <objectgroup id="8" name="Future_Col">
+  <object id="9" x="0" y="672" width="96" height="48"/>
+  <object id="10" x="128" y="672" width="144" height="48"/>
+ </objectgroup>
+</map>

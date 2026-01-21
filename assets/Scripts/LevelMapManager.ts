@@ -117,11 +117,13 @@ export class LevelMapManager extends Component {
         const halfH = totalH / 2;
 
         for (const object of objects){
+            console.log(`[TiledDebug] 发现对象 Name: ${object.name}, Type: ${object.type}`);
             const cpNode = instantiate(this.checkpointPrefab);
             cpRoot.addChild(cpNode);
             cpNode.name = object.name || "Checkpoint";
+            const name = object.name ? String(object.name).toLowerCase() : "";
 
-            if (object.type && String(object.type) === "checkpoint") {
+            if (name === "checkpoint") {
                 const w = object.width;
                 const h = object.height;
                 const tiledX = object.x; 
@@ -147,13 +149,18 @@ export class LevelMapManager extends Component {
                 continue; // 绝对不要把 NaN 传给 setPosition
             }
 
+
+            console.log(`生成存档点 位置x:${finalX} y:${finalY}`)
             cpNode.setPosition(v3(finalX, finalY, 0));
 
             // 处理拉伸Checkpoint的碰撞箱尺寸(报错就改)
             const collider = cpNode.getComponent(BoxCollider2D);
                 if (collider && w > 0 && h > 0) {
-                     collider.size = new Size(w, h);
-                     collider.apply(); // 刷新
+                    collider.group = GROUP_LEVEL;
+                    let w = (object.width && object.width > 0) ? object.width : 64;
+                    let h = (object.height && object.height > 0) ? object.height : 64;
+                    collider.size = new Size(w, h);
+                    collider.apply(); // 刷新
                 }
             }
         }
