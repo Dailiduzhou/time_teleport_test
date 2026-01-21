@@ -15,11 +15,32 @@ export class LevelMapManager extends Component {
 
     @property({ tooltip: "淡入淡出耗时(秒)" })
     fadeDuration: number = 0.5;
+    //世界状态的只读出口
+    public getCurrentState(): TimeState {
+        return this.currentState;
+    }
+    //监听列表，所有受世界变化影响的对象都可以注册一个回调函数
+    private timeListeners: ((state: TimeState) => void)[] = [];
+    //公共方法，提供注册接口
+    public registerTimeListener(cb: (state: TimeState) => void) {
+        // 正确判断：只有当回调不在列表中时才添加
+        if (this.timeListeners.indexOf(cb) === -1) {
+            this.timeListeners.push(cb);
+        }
+    }
+    //公共方法，提供注销接口
+    public unregisterTimeListener(cb: (state: TimeState) => void) {
+        const idx = this.timeListeners.indexOf(cb);
+        if (idx !== -1) {
+            this.timeListeners.splice(idx, 1);
+        }
+    }
+
 
     // 用来存储生成的碰撞体父节点，方便整体开关
     private pastColRoot: Node = null;
     private futureColRoot: Node = null;
-    
+
     // 用来引用 Tiled 自动生成的图块层节点
     private pastArtLayer: Node = null;
     private futureArtLayer: Node = null;
@@ -118,6 +139,12 @@ export class LevelMapManager extends Component {
         // 2. 处理画面
         if (this.pastArtLayer) this.pastArtLayer.active = isPast;
         if (this.futureArtLayer) this.futureArtLayer.active = !isPast;
+        //3.通知所有监听者
+        for (let i = 0; i < this.timeListeners.length; i++) {
+            const cb = this.timeListeners[i];
+            cb(this.currentState);
+        }
+
     }
 
     private generateColliders(layerName: string, groupIndex: number): Node {
@@ -153,13 +180,13 @@ export class LevelMapManager extends Component {
         for (const object of objects) {
             const colliderNode = new Node();
             colliderNode.name = object.name || "Collider";
-            
+
             // 重要：添加到新建的 rootNode 中
             rootNode.addChild(colliderNode);
 
             const w = object.width;
             const h = object.height;
-            const tiledX = object.x; 
+            const tiledX = object.x;
             const tiledY = object.y;
 
             if (typeof w !== 'number' || typeof h !== 'number' || typeof tiledX !== 'number' || typeof tiledY !== 'number') {
@@ -167,12 +194,12 @@ export class LevelMapManager extends Component {
                 continue;
             }
 
-            
+
 
             // 如果你想直接丢弃 0 尺寸对象（推荐）：
             if (w <= 0 || h <= 0) {
-               console.warn(`[Invalid Size] 对象 ${object.name} 尺寸为 0，已丢弃。`);
-               continue;
+                console.warn(`[Invalid Size] 对象 ${object.name} 尺寸为 0，已丢弃。`);
+                continue;
             }
 
             // 使用之前验证通过的中心锚点(0.5, 0.5)公式
@@ -188,10 +215,10 @@ export class LevelMapManager extends Component {
 
             const rb = colliderNode.addComponent(RigidBody2D);
             rb.type = ERigidBody2DType.Static;
-            
+
             const collider = colliderNode.addComponent(BoxCollider2D);
             collider.size = new Size(w, h);
-            
+
             // 设置对应的分组
             collider.group = groupIndex;
         }
