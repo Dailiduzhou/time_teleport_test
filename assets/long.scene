@@ -184,7 +184,7 @@
     "_priority": 1,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 455.29581529581526,
+    "_orthoHeight": 623.5897435897435,
     "_near": 0,
     "_far": 2000,
     "_color": {
@@ -471,6 +471,12 @@
       "__id__": 40
     },
     "fadeDuration": 0.5,
+    "playerNode": {
+      "__id__": 6
+    },
+    "cameraNode": {
+      "__id__": 5
+    },
     "checkpointPrefab": {
       "__uuid__": "8d5bf664-63b3-4845-854d-6de081f67656",
       "__expectedType__": "cc.Prefab"
@@ -483,6 +489,7 @@
       "__uuid__": "fb763646-5c01-4809-90e9-37e5ee4c9dfa",
       "__expectedType__": "cc.Prefab"
     },
+    "stuckForgiveness": 0.2,
     "_id": "45WUmIOdRKxqTYjNQuA3UU"
   },
   {
