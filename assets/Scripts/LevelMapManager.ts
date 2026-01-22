@@ -207,10 +207,31 @@ export class LevelMapManager extends Component {
 
                     // 将中心点转换为 Rect 左下角坐标
                     // Rect 的 x,y 是左下角，而 centerX,centerY 是中心点
-                    const rectX = centerX - w / 2;
-                    const rectY = centerY - h / 2;
+                    let rectX = centerX - w / 2;
+                    let rectY = centerY - h / 2;
 
-                    console.log(`[ViewZone矩形] rectX=${rectX.toFixed(2)}, rectY=${rectY.toFixed(2)}`);
+                    // 【重要修正】确保 ViewZone 不会超出地图范围
+                    // 地图范围: x: [-960, 960], y: [-540, 540] (假设地图高度 1080)
+                    const mapMinY = -halfH;  // -360
+                    const mapMaxY = halfH;   // 360 (旧地图) 或更大
+
+                    // 如果 ViewZone 底部超出地图底部，向上调整
+                    if (rectY < mapMinY) {
+                        console.warn(`[ViewZone] 底部超出地图范围！rectY=${rectY.toFixed(1)} < mapMinY=${mapMinY}`);
+                        rectY = mapMinY;  // 调整到地图底部
+                        console.log(`[ViewZone] 已修正 rectY 为 ${rectY.toFixed(1)}`);
+                    }
+
+                    // 如果 ViewZone 顶部超出地图顶部，向下调整
+                    const rectTopY = rectY + h;
+                    const currentMapMaxY = totalH / 2 - h; // 地图顶部 - ViewZone高度
+                    if (rectY > currentMapMaxY) {
+                        console.warn(`[ViewZone] 顶部超出地图范围！rectY=${rectY.toFixed(1)} > ${currentMapMaxY.toFixed(1)}`);
+                        rectY = currentMapMaxY;
+                        console.log(`[ViewZone] 已修正 rectY 为 ${rectY.toFixed(1)}`);
+                    }
+
+                    console.log(`[ViewZone矩形] rectX=${rectX.toFixed(2)}, rectY=${rectY.toFixed(2)}, 最终范围: [${rectY.toFixed(1)}, ${(rectY + h).toFixed(1)}]`);
 
                     // 获取 MapManager 并注册
                     const mapManager = this.getComponent(LevelMapManager);
