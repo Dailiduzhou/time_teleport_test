@@ -126,10 +126,6 @@ export class PlayerController extends Component {
         }
 
         this.playDeathEffect();
-
-        this.scheduleOnce(() => {
-            this.respawn();
-        }, 1.6);
     }
 
     private playDeathEffect() {
@@ -170,6 +166,8 @@ export class PlayerController extends Component {
 
         this.node.setWorldPosition(targetPos);
         this.isDead = false;
+        
+        console.log(`玩家复活,位置${targetPos}`);
         
         const rb = this.getComponent(RigidBody2D);
         if (rb){
