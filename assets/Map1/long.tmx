@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="left-down" width="120" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="6" nextobjectid="16">
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="left-down" width="120" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="6" nextobjectid="27">
  <tileset firstgid="1" source="floor.tsx"/>
  <layer id="1" name="Future_Art" width="120" height="45">
   <data encoding="base64" compression="zlib">
@@ -22,8 +22,11 @@
   <object id="9" x="1696" y="672" width="224" height="48"/>
  </objectgroup>
  <objectgroup id="5" name="Objects">
-  <object id="10" name="spike" x="704" y="592" width="64" height="64"/>
   <object id="13" name="spike" x="1056" y="592" width="64" height="64"/>
   <object id="15" name="checkpoint" x="544" y="640" width="32" height="32"/>
+  <object id="23" name="spike" x="736" y="608" width="64" height="64"/>
+  <object id="24" name="crumbling_platform" x="1392" y="624" width="64" height="16"/>
+  <object id="25" name="crumbling_platform" x="1520" y="576" width="64" height="16"/>
+  <object id="26" name="crumbling_platform" x="1632" y="512" width="64" height="16"/>
  </objectgroup>
 </map>
