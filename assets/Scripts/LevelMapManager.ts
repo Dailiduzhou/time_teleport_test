@@ -1,5 +1,6 @@
-import { _decorator, Component, Node, TiledMap, RigidBody2D, Collider2D, BoxCollider2D, ERigidBody2DType, Size, v3, PhysicsSystem2D, EPhysics2DDrawFlags, UIOpacity, UITransform, Prefab, instantiate, Rect, Vec3 } from 'cc';
+import { _decorator, Component, Node, TiledMap, math, RigidBody2D, Collider2D, BoxCollider2D, ERigidBody2DType, Size, v3, PhysicsSystem2D, EPhysics2DDrawFlags, UIOpacity, UITransform, Prefab, instantiate, Rect, Vec3 } from 'cc';
 import { CameraFollow } from './CameraFollow';
+import { Telescope } from './Telescope';
 const { ccclass, property } = _decorator;
 
 const GROUP_LEVEL = 1 << 2;
@@ -7,6 +8,11 @@ const GROUP_LEVEL = 1 << 2;
 export enum TimeState {
     Past,
     Future
+}
+
+export interface ScopeData {
+    rect: math.Rect;
+    center: Vec3;
 }
 
 @ccclass('LevelMapManager')
@@ -53,6 +59,14 @@ export class LevelMapManager extends Component {
 
     @property({ type: Prefab, tooltip: "碎裂地面预制体"})
     crumblingPlatformPrefab: Prefab = null!;
+
+    @property({ type: Prefab, tooltip: "望远镜预制体"})
+    telescopePrefab: Prefab = null!;
+
+    @property
+    debugDraw: boolean = true;
+
+    private _boundsMap: Map<number, ScopeData> = new Map();
 
     @property({ 
         slide: true, 
@@ -165,6 +179,41 @@ export class LevelMapManager extends Component {
         for (const object of objects){
             const rawName = object.name || "Unknown";
             const name = rawName.toLowerCase();
+
+            if (name === "viewzone" || name.includes("viewzone")) {
+                console.log(`获取并开始处理 ${rawName}`);
+                // 提取 boundID
+                // 注意：Tiled 对象属性在 properties 字段中 (object.properties)
+                // 不同的导出格式访问方式略有不同，通常是 object.properties.xxx 或者 object.xxx
+                const props = object.properties || {}; // 防空
+                const boundID = props["boundID"] || props["scopeID"]; // 兼容两种写法
+                console.log(`获取 ${boundID}`);
+
+                if (boundID != null) {
+                    // 计算世界坐标矩形 (复用你的坐标公式，或者 MapManager 内部计算)
+                    const w = object.width || 0;
+                    const h = object.height || 0;
+                    const tiledX = object.x || 0;
+                    const tiledY = object.y || 0;
+                    
+                    // 计算中心点坐标
+                    const finalX = -halfW + tiledX + (w / 2);
+                    const finalY = -halfH + tiledY - (h / 2);
+                    
+                    // 获取 MapManager 并注册
+                    const mapManager = this.getComponent(LevelMapManager);
+                    if (mapManager) {
+                        // 注意：这里需要把中心点转回左下角或者直接传 Rect，视 MapManager 实现而定
+                        // 建议直接传 Rect(x, y, w, h)，这里的 x,y 是世界坐标的左下角
+                        // 根据中心点推算左下角：
+                        const worldX = finalX - w/2;
+                        const worldY = finalY - h/2;
+                        mapManager.registerScope(Number(boundID), worldX, worldY, w, h);
+                        console.log(`[Map] 注册 ViewZone ID: ${boundID}`);
+                    }
+                }
+                continue; // 处理完 ViewZone 直接跳过后续 Prefab 生成
+            }
             
             console.log(`[TiledDebug] 发现对象 Name: ${rawName}, Type: ${object.type}`);
             
@@ -185,6 +234,8 @@ export class LevelMapManager extends Component {
             }
 
             let targetPrefab: Prefab | null = null;
+            let shouldScale = true;
+
             switch (name) {
                 case "checkpoint":
                     if (!this.checkpointPrefab) {
@@ -207,6 +258,15 @@ export class LevelMapManager extends Component {
                     }
                     targetPrefab = this.crumblingPlatformPrefab;
                     break;
+                case "telescope":
+                    if (!this.telescopePrefab) {
+                        console.warn(`未绑定${name}预制体`)
+                        return;
+                    }
+                    targetPrefab = this.telescopePrefab;
+                    shouldScale = false; // 望远镜通常保持原图大小，不随你在 Tiled 画的框拉伸
+                    console.log(`试图生成 Telescope`);
+                    break;
                 default:
                     break;
             }
@@ -224,23 +284,38 @@ export class LevelMapManager extends Component {
             objectsRoot.addChild(newNode);
 
             newNode.name = rawName;
-
-            const uiTransform = newNode.getComponent(UITransform);
-            // 设置默认值，防止组件丢失报错
-            let originalWidth = 100; 
-            let originalHeight = 100;
-            if (uiTransform && uiTransform.contentSize.width > 0) {
-                originalWidth = uiTransform.contentSize.width;
-                originalHeight = uiTransform.contentSize.height;
-            }
-
-            const scaleX = w / originalWidth;
-            const scaleY = h / originalHeight;
-
-            newNode.setScale(v3(scaleX, scaleY, 1));
-
             newNode.setPosition(v3(finalX, finalY, 0));
             console.log(`生成对象 [${rawName}] 位置 x:${finalX} y:${finalY}`);
+
+            if (shouldScale) {
+                const uiTransform = newNode.getComponent(UITransform);
+                let originalWidth = 100; 
+                let originalHeight = 100;
+                if (uiTransform && uiTransform.contentSize.width > 0) {
+                    originalWidth = uiTransform.contentSize.width;
+                    originalHeight = uiTransform.contentSize.height;
+                }
+                const scaleX = w / originalWidth;
+                const scaleY = h / originalHeight;
+                newNode.setScale(v3(scaleX, scaleY, 1));
+            }
+
+            if (name === "telescope") {
+                const telescopeScript = newNode.getComponent(Telescope);
+                if (telescopeScript) {
+                    // 获取属性
+                    // Tiled 中属性名为 scopeID，确保你在 Tiled 里添加了这个 Int 属性
+                    const props = object.properties || {}; 
+                    const tID = props["scopeID"]; 
+
+                    if (tID != null) {
+                        telescopeScript.scopeID = Number(tID);
+                        console.log(`[Telescope] 生成望远镜，绑定 ID: ${tID}`);
+                    } else {
+                        console.warn(`[Telescope] Tiled 对象 ${rawName} 缺少 scopeID 属性！`);
+                    }
+                }
+            }
 
             // 处理拉伸Checkpoint的碰撞箱尺寸(报错就改)
             const collider = newNode.getComponent(Collider2D);
@@ -474,5 +549,18 @@ export class LevelMapManager extends Component {
         }
 
         return false;
+    }
+
+    public registerScope(id: number, x: number, y: number, w: number, h: number) {
+        const rect = new math.Rect(x, y, w, h);
+        // 存入 Map
+        this._boundsMap.set(id, {
+            rect: rect,
+            center: new Vec3(rect.center.x, rect.center.y, 0)
+        });
+    }
+
+    public getScopeData(scopeID: number): ScopeData | undefined {
+        return this._boundsMap.get(scopeID);
     }
 }

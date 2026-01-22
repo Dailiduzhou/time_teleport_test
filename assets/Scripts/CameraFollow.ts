@@ -1,7 +1,13 @@
-import { _decorator, Component, Node, Vec3, TiledMap, UITransform, view, math, randomRange } from 'cc';
-const { ccclass, property } = _decorator;
+import { _decorator, Component, Node, Vec3, TiledMap, UITransform, view, math, randomRange, Camera } from 'cc';
+const { ccclass, property, requireComponent } = _decorator;
+
+enum CameraState {
+    FOLLOW_PLAYER,
+    TELESCOPE_MODE
+}
 
 @ccclass('CameraFollow')
+@requireComponent(Camera)
 export class CameraFollow extends Component {
 
     @property({ type: Node, tooltip: '需要跟随的玩家节点' })
@@ -16,6 +22,10 @@ export class CameraFollow extends Component {
     @property({ tooltip: '镜头偏移量 (例如希望主角稍微偏下一点)' })
     offset: Vec3 = new Vec3(0, 0, 0);
 
+    @property({ tooltip: "望远镜模式下的移动速度"})
+    panSpeed: number = 500;
+
+    private _state: CameraState = CameraState.FOLLOW_PLAYER;
     private _viewSize: math.Size = new math.Size();
     private _targetPos: Vec3 = new Vec3(); // 目标最终位置
     private _currentPos: Vec3 = new Vec3(); // 当前摄像机位置
@@ -23,6 +33,7 @@ export class CameraFollow extends Component {
     private _maxX: number = 0;
     private _minY: number = 0;
     private _maxY: number = 0;
+    private _viewBounds: math.Rect | null = null;
 
     // --- 震动相关变量 ---
     private _shakeDuration: number = 0;    // 当前剩余震动时间
@@ -30,6 +41,11 @@ export class CameraFollow extends Component {
     private _shakeOffset: Vec3 = new Vec3(); // 这一帧计算出的震动偏移量
 
     private _debugFrameCount: number = 0;
+    private _camera: Camera = null!;
+
+    onLoad(){
+        this._camera = this.getComponent(Camera)!;
+    }
 
     start() {
         if (!this.tiledMap || !this.target) {
@@ -112,6 +128,56 @@ export class CameraFollow extends Component {
         this._maxY = mapTop - halfViewH;
     }
 
+    public enterTelescopeMode(bounds: math.Rect) {
+        this._state = CameraState.TELESCOPE_MODE;
+        this._viewBounds = bounds;
+        this._targetPos = this.node.position.clone();
+    }
+
+    public exitTelescopeMode() {
+        this._state = CameraState.FOLLOW_PLAYER;
+        this._viewBounds = null;
+    }
+
+    public moveTelescope(inputDir: Vec3, dt: number) {
+        if (this._state !== CameraState.TELESCOPE_MODE) return;
+        
+        // 1. 计算原本的目标移动
+        const moveVec = inputDir.multiplyScalar(this.panSpeed * dt);
+        this._targetPos.add(moveVec);
+
+        // 2. 动态获取当前摄像机的可视范围（世界单位的一半）
+        const { halfW, halfH } = this.getCameraWorldSize();
+
+        // 3. 核心：限制在矩形范围内
+        if (this._viewBounds) {
+            // 计算允许摄像机中心点存在的最小和最大坐标
+            // 最小值 = 左边界 + 摄像机半宽
+            // 最大值 = 右边界 (x + width) - 摄像机半宽
+            let minX = this._viewBounds.x + halfW;
+            let maxX = this._viewBounds.x + this._viewBounds.width - halfW;
+            let minY = this._viewBounds.y + halfH;
+            let maxY = this._viewBounds.y + this._viewBounds.height - halfH;
+
+            // [安全保护] 如果可视范围(Rect)比屏幕还小怎么办？
+            // 策略：将摄像机强制锁定在 Rect 的中心
+            if (minX > maxX) {
+                const centerX = this._viewBounds.x + this._viewBounds.width / 2;
+                minX = centerX;
+                maxX = centerX;
+            }
+            if (minY > maxY) {
+                const centerY = this._viewBounds.y + this._viewBounds.height / 2;
+                minY = centerY;
+                maxY = centerY;
+            }
+
+            // 执行 Clamp
+            this._targetPos.x = math.clamp(this._targetPos.x, minX, maxX);
+            this._targetPos.y = math.clamp(this._targetPos.y, minY, maxY);
+        }
+    }
+
     lateUpdate(dt: number) {
         if (!this.target) return;
 
@@ -163,5 +229,20 @@ export class CameraFollow extends Component {
         // 【关键修改点 2】使用 setWorldPosition 应用坐标
         // 这样无论你的 Camera 父节点是谁，它都会乖乖去到世界坐标的绝对位置
         this.node.setWorldPosition(this._targetPos);
+    }
+
+    private getCameraWorldSize() {
+        // 1. 获取正交视图的高度 (Camera 组件上设置的值，代表屏幕高度的一半)
+        const orthoHeight = this._camera.orthoHeight;
+
+        // 2. 获取屏幕当前的宽高比 (Width / Height)
+        const visibleSize = view.getVisibleSize();
+        const ratio = visibleSize.width / visibleSize.height;
+
+        // 3. 计算宽度
+        // 既然 orthoHeight 是半高，那么：半宽 = 半高 * 宽高比
+        const orthoWidth = orthoHeight * ratio;
+
+        return { halfW: orthoWidth, halfH: orthoHeight };
     }
 }
