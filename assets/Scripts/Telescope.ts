@@ -15,15 +15,18 @@ export class Telescope extends Component {
     @property({ type: Node, tooltip: '按键提示UI (如 "按E互动" 的气泡)' })
     promptUI: Node | null = null;
 
+    @property({ type: LevelMapManager, tooltip: "关卡管理器"})
+    mapManager: LevelMapManager | null = null;
+
+    @property({ type: CameraFollow, tooltip: "镜头跟随脚本"})
+    cameraFollow: CameraFollow | null = null;
+
     // --- 内部状态 ---
 
     private _isPlayerInside: boolean = false; // 玩家是否在触发区域内
     private _isActive: boolean = false;       // 是否正在使用望远镜
     private _pressedKeys: Set<KeyCode> = new Set(); // 记录当前按下的键，用于平滑移动
 
-    // --- 外部引用 (自动查找) ---
-    private _cameraCtrl: CameraFollow | null = null;
-    private _mapManager: LevelMapManager | null = null;
 
     onLoad() {
         // 1. 初始化碰撞监听
@@ -45,16 +48,7 @@ export class Telescope extends Component {
     }
 
     start() {
-        // 自动查找场景中的关键组件，避免手动拖拽的麻烦
-        // 假设 Main Camera 就在场景根目录或者常用位置
-        const camNode = find("Main Camera") || find("Camera");
-        if (camNode) this._cameraCtrl = camNode.getComponent(CameraFollow);
-
-        // 假设 Map 节点名字叫 "Level" 或 "Map"
-        const mapNode = find("Level") || find("Map");
-        if (mapNode) this._mapManager = mapNode.getComponent(LevelMapManager);
-
-        if (!this._cameraCtrl || !this._mapManager) {
+        if (!this.cameraFollow || !this.mapManager) {
             console.warn("Telescope: 未找到 CameraFollow 或 LevelMapManager，请检查节点命名或手动赋值。");
         }
     }
@@ -67,7 +61,7 @@ export class Telescope extends Component {
 
     update(dt: number) {
         // 只有在激活状态下，才处理摄像机移动逻辑
-        if (this._isActive && this._cameraCtrl) {
+        if (this._isActive && this.cameraFollow) {
             this.handleInputMovement(dt);
         }
     }
@@ -75,10 +69,13 @@ export class Telescope extends Component {
     // --- 交互逻辑 ---
 
     private toggleTelescope() {
-        if (!this._mapManager || !this._cameraCtrl) return;
+        if (!this.mapManager || !this.cameraFollow) {
+            console.error(`[Telescope] 交互失败！缺少依赖组件：mapManager=${!!this.mapManager}, cameraFollow=${!!this.cameraFollow}`);
+            return;
+        }
 
         // 获取可视范围数据
-        const scopeData = this._mapManager.getScopeData(this.scopeID);
+        const scopeData = this.mapManager.getScopeData(this.scopeID);
         if (!scopeData) {
             console.warn(`Telescope: 找不到 ID 为 ${this.scopeID} 的 ViewZone 数据`);
             return;
@@ -88,7 +85,7 @@ export class Telescope extends Component {
 
         if (this._isActive) {
             // 1. 摄像机接管
-            this._cameraCtrl.enterTelescopeMode(scopeData.rect);
+            this.cameraFollow.enterTelescopeMode(scopeData.rect);
             
             CinematicManager.instance.show();
             
@@ -99,7 +96,7 @@ export class Telescope extends Component {
             Director.instance.emit('PLAYER_FREEZE', true); 
         } else {
             // 1. 摄像机复位
-            this._cameraCtrl.exitTelescopeMode();
+            this.cameraFollow.exitTelescopeMode();
 
             CinematicManager.instance.hide();
 
@@ -120,6 +117,7 @@ export class Telescope extends Component {
         // 交互键检测 (例如 E 键)
         if (event.keyCode === KeyCode.KEY_E) {
             if (this._isPlayerInside) {
+                console.log(`[Info]成功与望远镜交互！`);
                 this.toggleTelescope();
             }
         }
@@ -154,7 +152,7 @@ export class Telescope extends Component {
         // 归一化，防止斜向移动速度变快
         if (inputDir.lengthSqr() > 0) {
             inputDir.normalize();
-            this._cameraCtrl!.moveTelescope(inputDir, dt);
+            this.cameraFollow!.moveTelescope(inputDir, dt);
         }
     }
 

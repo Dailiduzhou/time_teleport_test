@@ -1,6 +1,5 @@
 import { _decorator, Component, Node, TiledMap, math, RigidBody2D, Collider2D, BoxCollider2D, ERigidBody2DType, Size, v3, PhysicsSystem2D, EPhysics2DDrawFlags, UIOpacity, UITransform, Prefab, instantiate, Rect, Vec3 } from 'cc';
 import { CameraFollow } from './CameraFollow';
-import { Telescope } from './Telescope';
 const { ccclass, property } = _decorator;
 
 const GROUP_LEVEL = 1 << 2;
@@ -179,8 +178,10 @@ export class LevelMapManager extends Component {
         for (const object of objects){
             const rawName = object.name || "Unknown";
             const name = rawName.toLowerCase();
+            // console.log(`[TiledDebug] 发现对象 Name: ${rawName}, 转小写: ${name}, Type: ${object.type}`);
 
             if (name === "viewzone" || name.includes("viewzone")) {
+                // console.log(`[ViewZone检测] 匹配成功! 原始名称: ${rawName}, 小写名称: ${name}`);
                 console.log(`获取并开始处理 ${rawName}`);
                 // 提取 boundID
                 // 注意：Tiled 对象属性在 properties 字段中 (object.properties)
@@ -214,8 +215,8 @@ export class LevelMapManager extends Component {
                 }
                 continue; // 处理完 ViewZone 直接跳过后续 Prefab 生成
             }
-            
-            console.log(`[TiledDebug] 发现对象 Name: ${rawName}, Type: ${object.type}`);
+
+            console.log(`[Prefab处理] 开始检查对象 ${rawName} (小写: ${name}) 是否需要生成预制体`);
             
             const w = object.width;
             const h = object.height;
@@ -258,16 +259,8 @@ export class LevelMapManager extends Component {
                     }
                     targetPrefab = this.crumblingPlatformPrefab;
                     break;
-                case "telescope":
-                    if (!this.telescopePrefab) {
-                        console.warn(`未绑定${name}预制体`)
-                        return;
-                    }
-                    targetPrefab = this.telescopePrefab;
-                    shouldScale = false; // 望远镜通常保持原图大小，不随你在 Tiled 画的框拉伸
-                    console.log(`试图生成 Telescope`);
-                    break;
                 default:
+                    console.log(`[Switch跳过] 对象 ${rawName} (小写: ${name}) 不匹配任何预制体类型`);
                     break;
             }
 
@@ -287,7 +280,6 @@ export class LevelMapManager extends Component {
             newNode.setPosition(v3(finalX, finalY, 0));
             console.log(`生成对象 [${rawName}] 位置 x:${finalX} y:${finalY}`);
 
-            if (shouldScale) {
                 const uiTransform = newNode.getComponent(UITransform);
                 let originalWidth = 100; 
                 let originalHeight = 100;
@@ -298,25 +290,7 @@ export class LevelMapManager extends Component {
                 const scaleX = w / originalWidth;
                 const scaleY = h / originalHeight;
                 newNode.setScale(v3(scaleX, scaleY, 1));
-            }
-
-            if (name === "telescope") {
-                const telescopeScript = newNode.getComponent(Telescope);
-                if (telescopeScript) {
-                    // 获取属性
-                    // Tiled 中属性名为 scopeID，确保你在 Tiled 里添加了这个 Int 属性
-                    const props = object.properties || {}; 
-                    const tID = props["scopeID"]; 
-
-                    if (tID != null) {
-                        telescopeScript.scopeID = Number(tID);
-                        console.log(`[Telescope] 生成望远镜，绑定 ID: ${tID}`);
-                    } else {
-                        console.warn(`[Telescope] Tiled 对象 ${rawName} 缺少 scopeID 属性！`);
-                    }
-                }
-            }
-
+            
             // 处理拉伸Checkpoint的碰撞箱尺寸(报错就改)
             const collider = newNode.getComponent(Collider2D);
             if (collider) {
@@ -419,7 +393,7 @@ export class LevelMapManager extends Component {
         const halfW = totalW / 2;
         const halfH = totalH / 2;
 
-        console.log(`[MapDebug] Layer:${layerName} W:${totalW} H:${totalH}`);
+        // console.log(`[MapDebug] Layer:${layerName} W:${totalW} H:${totalH}`);
 
         for (const object of objects) {
             const colliderNode = new Node();

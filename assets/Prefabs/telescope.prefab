@@ -191,7 +191,7 @@
     "bullet": false,
     "awakeOnLoad": true,
     "_group": 1,
-    "_type": 2,
+    "_type": 0,
     "_allowSleep": true,
     "_gravityScale": 1,
     "_linearDamping": 0,
@@ -238,6 +238,7 @@
       "__id__": 0
     },
     "fileId": "ddLFmmMRJNo4536YDHTdot",
+    "instance": null,
     "targetOverrides": null
   }
 ]

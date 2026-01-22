@@ -181,6 +181,13 @@ export class CameraFollow extends Component {
     lateUpdate(dt: number) {
         if (!this.target) return;
 
+        if (this._state === CameraState.TELESCOPE_MODE) {
+            // 望远镜模式下，使用当前目标位置（由 moveTelescope 控制）
+            this.node.setWorldPosition(this._targetPos);
+            return;
+        }
+
+
         // 1. 获取目标的世界坐标 (这是绝对坐标)
         const targetWorldPos = this.target.worldPosition;
         
