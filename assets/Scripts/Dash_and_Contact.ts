@@ -37,7 +37,7 @@ export class PlayerController extends Component {
     coyoteTime: number = 0.1;
 
     @property({ group: "Feel", tooltip: "射线检测的长度（超出脚底的距离）" })
-    raycastLength: number = 0.1;
+    raycastLength: number = 10;
 
     @property({ group: "GamePlay"})
     minYThreshold: number = -50;
@@ -329,21 +329,15 @@ export class PlayerController extends Component {
     private checkGroundedWithRaycast() {
         if (!this._collider || !this._uiTransform) return;
 
-        // 1. 获取包围盒（世界坐标）
         const aabb = this._collider.worldAABB;
-        
-        // 2. 确定起点：身体中心
+        // 建议稍微调大一点，避免因为浮点数精度问题导致判定失效
         const startY = aabb.center.y; 
-
-        // 3. 计算射线总长度
-        // 长度 = (中心到脚底的距离) + (超出脚底的探测距离)
         const halfHeight = aabb.height / 2;
-        const totalRayLength = halfHeight + this.raycastLength; // 确保这个值足够大，能穿出脚底
+        const totalRayLength = halfHeight + this.raycastLength;
 
-        // 4. 设置三条射线的 X 坐标
-        // 这里的单位是像素（世界坐标）。+2 / -2 是为了防止贴墙时误判
-        const xMin = aabb.xMin + 2; 
-        const xMax = aabb.xMax - 2;
+        // 收缩一点 X 范围，防止贴墙时卡在墙缝里被判定为着地
+        const xMin = aabb.xMin + 5; 
+        const xMax = aabb.xMax - 5;
         const xCenter = aabb.center.x;
 
         const startPoints = [
@@ -354,43 +348,35 @@ export class PlayerController extends Component {
 
         let isHitGround = false;
 
-        // 5. 遍历三条射线
         for (const startPoint of startPoints) {
             const p2 = v2(startPoint.x, startPoint.y - totalRayLength); 
+            
+            // 绘制调试射线 (Cocos Creator 3.x 调试用，不用时注释掉)
+            // PhysicsSystem2D.instance.debugDrawFlags = 1; 
+
             const results = PhysicsSystem2D.instance.raycast(startPoint, p2, ERaycast2DType.All, this.groundLayerMask);
 
             for (const result of results) {
-                // 排除玩家自己
                 if (result.collider.node === this.node) continue;
-
-                // 排除触发器 (Sensor)，防止把金币或检查点当成地面（可选）
                 if (result.collider.sensor) continue;
-
-                // 简单的法线判定，确保踩在平面上而不是墙壁侧面
-                // 1 表示完全朝上，0.7 大约是 45 度角
-                if (result.normal.y > 0.7) { 
-                    isHitGround = true;
-
-                    // 碎裂地块逻辑
-                    const crumbleComp = result.collider.getComponent(CrumblingPlatform);
-                    if (crumbleComp) {
-                        crumbleComp.onPlayerStay();
-                    }
-                    
-                    break; // 找到一个有效地面即可停止当前射线循环
-                }
+                isHitGround = true;
                 
-                // Debug: 如果还是不行，打开这个 Log 看看射线到底打到了什么
-                if (!isHitGround && results.length > 0) {
-                    console.log("射线打中了东西但判定无效:", results);
+                const crumbleComp = result.collider.getComponent(CrumblingPlatform);
+                if (crumbleComp) {
+                    crumbleComp.onPlayerStay();
                 }
+
+                break; 
+                
             }
-            if (isHitGround) break; // 只要有一条腿踩在地上，就算着地
+            if (isHitGround) break;
         }
 
         this._isGrounded = isHitGround;
-        // 只有在地面上才恢复冲刺次数 (或者放在 update 的土狼时间里处理)
+
+        // 【关键修复】着地时重置土狼时间
         if (isHitGround) {
+            this.coyoteTimer = this.coyoteTime;
             this.canDash = true;
         }
     }
