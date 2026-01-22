@@ -196,21 +196,27 @@ export class LevelMapManager extends Component {
                     const h = object.height || 0;
                     const tiledX = object.x || 0;
                     const tiledY = object.y || 0;
-                    
-                    // 计算中心点坐标
-                    const finalX = -halfW + tiledX + (w / 2);
-                    const finalY = -halfH + tiledY - (h / 2);
-                    
+
+                    console.log(`[ViewZone原始数据] tiledX=${tiledX}, tiledY=${tiledY}, w=${w}, h=${h}, halfW=${halfW}, halfH=${halfH}`);
+
+                    // 计算中心点坐标（与预制体生成使用相同的公式）
+                    const centerX = -halfW + tiledX + (w / 2);
+                    const centerY = -halfH + tiledY - (h / 2);
+
+                    console.log(`[ViewZone中心点] centerX=${centerX.toFixed(2)}, centerY=${centerY.toFixed(2)}`);
+
+                    // 将中心点转换为 Rect 左下角坐标
+                    // Rect 的 x,y 是左下角，而 centerX,centerY 是中心点
+                    const rectX = centerX - w / 2;
+                    const rectY = centerY - h / 2;
+
+                    console.log(`[ViewZone矩形] rectX=${rectX.toFixed(2)}, rectY=${rectY.toFixed(2)}`);
+
                     // 获取 MapManager 并注册
                     const mapManager = this.getComponent(LevelMapManager);
                     if (mapManager) {
-                        // 注意：这里需要把中心点转回左下角或者直接传 Rect，视 MapManager 实现而定
-                        // 建议直接传 Rect(x, y, w, h)，这里的 x,y 是世界坐标的左下角
-                        // 根据中心点推算左下角：
-                        const worldX = finalX - w/2;
-                        const worldY = finalY - h/2;
-                        mapManager.registerScope(Number(boundID), worldX, worldY, w, h);
-                        console.log(`[Map] 注册 ViewZone ID: ${boundID}`);
+                        mapManager.registerScope(Number(boundID), rectX, rectY, w, h);
+                        console.log(`[Map] 注册 ViewZone ID: ${boundID}, 矩形: x=${rectX.toFixed(2)}, y=${rectY.toFixed(2)}, w=${w}, h=${h}`);
                     }
                 }
                 continue; // 处理完 ViewZone 直接跳过后续 Prefab 生成

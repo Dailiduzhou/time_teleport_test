@@ -28,7 +28,7 @@
   <object id="24" name="crumbling_platform" x="1392" y="624" width="64" height="16"/>
   <object id="25" name="crumbling_platform" x="1520" y="576" width="64" height="16"/>
   <object id="26" name="crumbling_platform" x="1632" y="512" width="64" height="16"/>
-  <object id="34" name="ViewZone" x="192" y="416" width="1728" height="304">
+  <object id="34" name="ViewZone" x="176" y="0" width="1744" height="720">
    <properties>
     <property name="boundID" value="101"/>
    </properties>

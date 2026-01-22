@@ -1,4 +1,4 @@
-import { _decorator, Component, Sprite, UITransform, Color, Input, input, EventKeyboard, KeyCode, Vec2, ERaycast2DType, RigidBody2D, v2, Collider2D, Contact2DType, IPhysics2DContact, AudioSource, tween, Vec3, PhysicsSystem2D} from 'cc';
+import { _decorator, Component, Sprite, UITransform, Color, Input, input, EventKeyboard, KeyCode, Vec2, ERaycast2DType, RigidBody2D, v2, Collider2D, Contact2DType, IPhysics2DContact, AudioSource, tween, Vec3, PhysicsSystem2D, Director } from 'cc';
 import { TimeTravelManager } from './TimeTravelManager';
 import { GameManager } from './GameManager';
 import { Hazard } from './Hazard';
@@ -58,11 +58,12 @@ export class PlayerController extends Component {
     private rb: RigidBody2D = null!;
     private inputDir: Vec2 = v2(0, 0);
     private facingDir: number = 1;
-    
+
     // 状态标记
     private isDashing: boolean = false;
     private canDash: boolean = true;
     private isDead: boolean = false;
+    private isFrozen: boolean = false;  // 是否被冻结（望远镜模式等）
     private _isGrounded: boolean = false;
     private _collider: Collider2D | null = null;
     private _uiTransform: UITransform | null = null;
@@ -75,10 +76,13 @@ export class PlayerController extends Component {
         this.rb = this.getComponent(RigidBody2D)!;
         this._collider = this.getComponent(Collider2D);
         this._uiTransform = this.getComponent(UITransform);
-        
+
         input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         input.on(Input.EventType.KEY_UP, this.onKeyUp, this);
-        
+
+        // 监听玩家冻结事件（望远镜模式等）
+        Director.instance.on('PLAYER_FREEZE', this.onPlayerFreeze, this);
+
         const collider = this.getComponent(Collider2D);
         if (collider) {
             collider.on(Contact2DType.BEGIN_CONTACT, this.onBeginContact, this);
@@ -90,6 +94,7 @@ export class PlayerController extends Component {
     onDestroy() {
         input.off(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         input.off(Input.EventType.KEY_UP, this.onKeyUp, this);
+        Director.instance.off('PLAYER_FREEZE', this.onPlayerFreeze, this);
         const collider = this.getComponent(Collider2D);
         if (collider) {
             collider.off(Contact2DType.BEGIN_CONTACT, this.onBeginContact, this);
@@ -98,6 +103,14 @@ export class PlayerController extends Component {
 
    update(dt: number) {
         if (this.isDead) return;
+
+        // 检查是否被冻结（望远镜模式等）
+        if (this.isFrozen) {
+            // 清空速度和输入
+            this.rb.linearVelocity = Vec2.ZERO.clone();
+            this.inputDir.set(0, 0);
+            return; // 跳过所有更新逻辑
+        }
 
         // 掉落死亡检测
         if (this.node.getWorldPosition().y < this.minYThreshold){
@@ -206,6 +219,21 @@ export class PlayerController extends Component {
             this.rb.gravityScale = this.fallMutiplier;
         } else {
             this.rb.gravityScale = 1;
+        }
+    }
+
+    /**
+     * 处理玩家冻结事件（望远镜模式等）
+     * @param frozen true=冻结玩家, false=解冻玩家
+     */
+    private onPlayerFreeze(frozen: boolean) {
+        this.isFrozen = frozen;
+        console.log(`[Dash_and_Contact] 玩家${frozen ? '已冻结' : '已解冻'}`);
+
+        // 如果被冻结，立即清空速度
+        if (frozen && this.rb) {
+            this.rb.linearVelocity = Vec2.ZERO.clone();
+            this.inputDir.set(0, 0);
         }
     }
 

@@ -29,6 +29,7 @@ export class CameraFollow extends Component {
     private _viewSize: math.Size = new math.Size();
     private _targetPos: Vec3 = new Vec3(); // 目标最终位置
     private _currentPos: Vec3 = new Vec3(); // 当前摄像机位置
+    private _telescopeInputDir: Vec3 = new Vec3(); // 望远镜模式的输入方向
     private _minX: number = 0;
     private _maxX: number = 0;
     private _minY: number = 0;
@@ -131,62 +132,72 @@ export class CameraFollow extends Component {
     public enterTelescopeMode(bounds: math.Rect) {
         this._state = CameraState.TELESCOPE_MODE;
         this._viewBounds = bounds;
-        this._targetPos = this.node.position.clone();
+
+        // 获取相机可视范围的一半尺寸
+        const { halfW, halfH } = this.getCameraWorldSize();
+
+        // 计算允许相机中心点存在的最小和最大坐标
+        let minX = bounds.x + halfW;
+        let maxX = bounds.x + bounds.width - halfW;
+        let minY = bounds.y + halfH;
+        let maxY = bounds.y + bounds.height - halfH;
+
+        // 安全保护：如果 ViewZone 比屏幕小，锁定在中心
+        if (minX > maxX) {
+            const centerX = bounds.x + bounds.width / 2;
+            minX = maxX = centerX;
+        }
+        if (minY > maxY) {
+            const centerY = bounds.y + bounds.height / 2;
+            minY = maxY = centerY;
+        }
+
+        // 将相机初始化到 ViewZone 的中心（在限制范围内）
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
+        // 获取当前相机的 z 坐标
+        this.node.getWorldPosition(this._targetPos);
+        this._targetPos.x = centerX;
+        this._targetPos.y = centerY;
+
+        // 清空输入方向
+        this._telescopeInputDir.set(0, 0, 0);
+
+        console.log(`[Camera] 进入望远镜模式，bounds: x=${bounds.x.toFixed(1)}, y=${bounds.y.toFixed(1)}, w=${bounds.width}, h=${bounds.height}`);
+        console.log(`[Camera] 相机初始化到中心: (${centerX.toFixed(1)}, ${centerY.toFixed(1)})`);
+        console.log(`[Camera] 限制范围: minX=${minX.toFixed(1)}, maxX=${maxX.toFixed(1)}, minY=${minY.toFixed(1)}, maxY=${maxY.toFixed(1)}`);
     }
 
     public exitTelescopeMode() {
         this._state = CameraState.FOLLOW_PLAYER;
         this._viewBounds = null;
+        this._telescopeInputDir.set(0, 0, 0);
+        console.log("[Camera] 退出望远镜模式");
     }
 
-    public moveTelescope(inputDir: Vec3, dt: number) {
-        if (this._state !== CameraState.TELESCOPE_MODE) return;
-        
-        // 1. 计算原本的目标移动
-        const moveVec = inputDir.multiplyScalar(this.panSpeed * dt);
-        this._targetPos.add(moveVec);
-
-        // 2. 动态获取当前摄像机的可视范围（世界单位的一半）
-        const { halfW, halfH } = this.getCameraWorldSize();
-
-        // 3. 核心：限制在矩形范围内
-        if (this._viewBounds) {
-            // 计算允许摄像机中心点存在的最小和最大坐标
-            // 最小值 = 左边界 + 摄像机半宽
-            // 最大值 = 右边界 (x + width) - 摄像机半宽
-            let minX = this._viewBounds.x + halfW;
-            let maxX = this._viewBounds.x + this._viewBounds.width - halfW;
-            let minY = this._viewBounds.y + halfH;
-            let maxY = this._viewBounds.y + this._viewBounds.height - halfH;
-
-            // [安全保护] 如果可视范围(Rect)比屏幕还小怎么办？
-            // 策略：将摄像机强制锁定在 Rect 的中心
-            if (minX > maxX) {
-                const centerX = this._viewBounds.x + this._viewBounds.width / 2;
-                minX = centerX;
-                maxX = centerX;
-            }
-            if (minY > maxY) {
-                const centerY = this._viewBounds.y + this._viewBounds.height / 2;
-                minY = centerY;
-                maxY = centerY;
-            }
-
-            // 执行 Clamp
-            this._targetPos.x = math.clamp(this._targetPos.x, minX, maxX);
-            this._targetPos.y = math.clamp(this._targetPos.y, minY, maxY);
+    /**
+     * 设置望远镜模式的输入方向
+     * @param inputDir 输入方向向量 (已归一化)
+     */
+    public setTelescopeInput(inputDir: Vec3) {
+        this._telescopeInputDir.set(inputDir);
+        // 只在有输入时记录日志，避免刷屏
+        if (inputDir.lengthSqr() > 0) {
+            console.log(`[Camera] setTelescopeInput: 接收到输入=(${inputDir.x.toFixed(2)}, ${inputDir.y.toFixed(2)})`);
         }
     }
 
     lateUpdate(dt: number) {
         if (!this.target) return;
 
+        // 【修复】只有在跟随玩家模式下才执行
         if (this._state === CameraState.TELESCOPE_MODE) {
-            // 望远镜模式下，使用当前目标位置（由 moveTelescope 控制）
-            this.node.setWorldPosition(this._targetPos);
+            // 望远镜模式：处理输入和移动
+            // console.log(`[Camera] lateUpdate: 望远镜模式，_telescopeInputDir=(${this._telescopeInputDir.x.toFixed(2)}, ${this._telescopeInputDir.y.toFixed(2)})`);
+            this.handleTelescopeMovement(dt);
             return;
         }
-
 
         // 1. 获取目标的世界坐标 (这是绝对坐标)
         const targetWorldPos = this.target.worldPosition;
@@ -235,6 +246,78 @@ export class CameraFollow extends Component {
 
         // 【关键修改点 2】使用 setWorldPosition 应用坐标
         // 这样无论你的 Camera 父节点是谁，它都会乖乖去到世界坐标的绝对位置
+        this.node.setWorldPosition(this._targetPos);
+    }
+
+    /**
+     * 处理望远镜模式下的移动
+     * 根据 _telescopeInputDir 和 panSpeed 更新相机位置，并限制在 _viewBounds 范围内
+     */
+    private handleTelescopeMovement(dt: number) {
+        // 1. 获取当前相机的世界坐标作为起点
+        this.node.getWorldPosition(this._currentPos);
+
+        // 2. 如果有输入，计算移动
+        if (this._telescopeInputDir.lengthSqr() > 0) {
+            // 计算移动向量：方向 * 速度 * 时间
+            const moveVec = new Vec3(
+                this._telescopeInputDir.x * this.panSpeed * dt,
+                this._telescopeInputDir.y * this.panSpeed * dt,
+                0
+            );
+
+            // 应用移动
+            Vec3.add(this._targetPos, this._currentPos, moveVec);
+
+            console.log(`[Camera] 移动相机: 当前=(${this._currentPos.x.toFixed(1)}, ${this._currentPos.y.toFixed(1)}), 移动=(${moveVec.x.toFixed(1)}, ${moveVec.y.toFixed(1)}), 目标=(${this._targetPos.x.toFixed(1)}, ${this._targetPos.y.toFixed(1)})`);
+        } else {
+            // 没有输入时，保持当前位置
+            this._targetPos.set(this._currentPos);
+        }
+
+        // 3. 获取相机可视范围的一半尺寸
+        const { halfW, halfH } = this.getCameraWorldSize();
+
+        // 4. 限制在 ViewZone 边界内
+        if (this._viewBounds) {
+            // 计算相机中心点允许存在的最小和最大坐标
+            // 最小值 = 左边界 + 相机半宽
+            // 最大值 = 右边界 - 相机半宽
+            let minX = this._viewBounds.x + halfW;
+            let maxX = this._viewBounds.x + this._viewBounds.width - halfW;
+
+            let minY = this._viewBounds.y + halfH;
+            let maxY = this._viewBounds.y + this._viewBounds.height - halfH;
+
+            console.log(`[Camera] ViewZone: x=${this._viewBounds.x.toFixed(1)}, y=${this._viewBounds.y.toFixed(1)}, w=${this._viewBounds.width}, h=${this._viewBounds.height}`);
+            console.log(`[Camera] Clamp前: minX=${minX.toFixed(1)}, maxX=${maxX.toFixed(1)}, minY=${minY.toFixed(1)}, maxY=${maxY.toFixed(1)}, halfW=${halfW.toFixed(1)}, halfH=${halfH.toFixed(1)}`);
+
+            // 安全保护：确保 minY <= maxY, minX <= maxX
+            if (minX > maxX) {
+                const centerX = this._viewBounds.x + this._viewBounds.width / 2;
+                minX = maxX = centerX;
+                console.log(`[Camera] X轴范围无效(${minX.toFixed(1)} > ${maxX.toFixed(1)})，锁定在中心: ${centerX.toFixed(1)}`);
+            }
+
+            if (minY > maxY) {
+                const centerY = this._viewBounds.y + this._viewBounds.height / 2;
+                minY = maxY = centerY;
+                console.log(`[Camera] Y轴范围无效(${minY.toFixed(1)} > ${maxY.toFixed(1)})，锁定在中心: ${centerY.toFixed(1)}`);
+                console.log(`[Camera] ViewZone高度(${this._viewBounds.height})小于相机可视高度(${halfH * 2})，Y轴无法移动`);
+            }
+
+            // 执行 Clamp 限制
+            const beforeX = this._targetPos.x;
+            const beforeY = this._targetPos.y;
+            this._targetPos.x = math.clamp(this._targetPos.x, minX, maxX);
+            this._targetPos.y = math.clamp(this._targetPos.y, minY, maxY);
+
+            if (Math.abs(beforeX - this._targetPos.x) > 0.1 || Math.abs(beforeY - this._targetPos.y) > 0.1) {
+                console.log(`[Camera] Clamp生效: (${beforeX.toFixed(1)}, ${beforeY.toFixed(1)}) -> (${this._targetPos.x.toFixed(1)}, ${this._targetPos.y.toFixed(1)})`);
+            }
+        }
+
+        // 5. 应用位置
         this.node.setWorldPosition(this._targetPos);
     }
 
