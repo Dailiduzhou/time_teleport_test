@@ -210,34 +210,42 @@ export class LevelMapManager extends Component {
                     let rectX = centerX - w / 2;
                     let rectY = centerY - h / 2;
 
-                    // 【重要修正】确保 ViewZone 不会超出地图范围
-                    // 地图范围: x: [-960, 960], y: [-540, 540] (假设地图高度 1080)
-                    const mapMinY = -halfH;  // -360
-                    const mapMaxY = halfH;   // 360 (旧地图) 或更大
+                    // 【重要修正】让 ViewZone 以地图中心为基准，获得最大的 Y 轴活动范围
+                    // 相机半高为 360 (720/2)，所以 ViewZone 高度至少需要 1440 (360*4) 才能让相机在中心时上下活动范围相等
+                    const mapCenterY = 0; // 地图中心 Y 坐标
+                    const desiredViewZoneHeight = 1440; // 期望的 ViewZone 高度 (至少 1440 以支持相机半高 360)
+                    const desiredViewZoneWidth = 1600; // 期望的 ViewZone 宽度
 
-                    // 如果 ViewZone 底部超出地图底部，向上调整
-                    if (rectY < mapMinY) {
-                        console.warn(`[ViewZone] 底部超出地图范围！rectY=${rectY.toFixed(1)} < mapMinY=${mapMinY}`);
-                        rectY = mapMinY;  // 调整到地图底部
-                        console.log(`[ViewZone] 已修正 rectY 为 ${rectY.toFixed(1)}`);
-                    }
+                    // 以地图中心创建新的 ViewZone
+                    const newRectX = mapCenterY - desiredViewZoneWidth / 2;
+                    const newRectY = mapCenterY - desiredViewZoneHeight / 2;
 
-                    // 如果 ViewZone 顶部超出地图顶部，向下调整
-                    const rectTopY = rectY + h;
-                    const currentMapMaxY = totalH / 2 - h; // 地图顶部 - ViewZone高度
-                    if (rectY > currentMapMaxY) {
-                        console.warn(`[ViewZone] 顶部超出地图范围！rectY=${rectY.toFixed(1)} > ${currentMapMaxY.toFixed(1)}`);
-                        rectY = currentMapMaxY;
-                        console.log(`[ViewZone] 已修正 rectY 为 ${rectY.toFixed(1)}`);
-                    }
+                    console.warn(`[ViewZone] 重新定位：从 (${rectX.toFixed(1)}, ${rectY.toFixed(1)}, ${w}, ${h}) 改为 (${newRectX.toFixed(1)}, ${newRectY.toFixed(1)}, ${desiredViewZoneWidth}, ${desiredViewZoneHeight})`);
+                    console.log(`[ViewZone] 原位置偏离地图中心 ${Math.abs(centerY).toFixed(1)} 像素，已自动修正`);
 
-                    console.log(`[ViewZone矩形] rectX=${rectX.toFixed(2)}, rectY=${rectY.toFixed(2)}, 最终范围: [${rectY.toFixed(1)}, ${(rectY + h).toFixed(1)}]`);
+                    rectX = newRectX;
+                    rectY = newRectY;
 
-                    // 获取 MapManager 并注册
+                    // 注册时使用新的尺寸
+                    const finalWidth = desiredViewZoneWidth;
+                    const finalHeight = desiredViewZoneHeight;
+
+                    console.log(`[ViewZone矩形] rectX=${rectX.toFixed(2)}, rectY=${rectY.toFixed(2)}, 最终范围: [${rectY.toFixed(1)}, ${(rectY + finalHeight).toFixed(1)}]`);
+
+                    // 【重要】将局部坐标转换为世界坐标
+                    // TiledMap 可能挂载在偏移的父节点下，需要加上父节点的世界坐标
+                    const tiledMapWorldPos = this.tiledMap.node.getWorldPosition();
+                    const worldRectX = rectX + tiledMapWorldPos.x;
+                    const worldRectY = rectY + tiledMapWorldPos.y;
+
+                    console.log(`[ViewZone坐标转换] TiledMap世界坐标=(${tiledMapWorldPos.x.toFixed(1)}, ${tiledMapWorldPos.y.toFixed(1)})`);
+                    console.log(`[ViewZone坐标转换] 局部:(${rectX.toFixed(1)}, ${rectY.toFixed(1)}) -> 世界:(${worldRectX.toFixed(1)}, ${worldRectY.toFixed(1)})`);
+
+                    // 获取 MapManager 并注册（使用世界坐标）
                     const mapManager = this.getComponent(LevelMapManager);
                     if (mapManager) {
-                        mapManager.registerScope(Number(boundID), rectX, rectY, w, h);
-                        console.log(`[Map] 注册 ViewZone ID: ${boundID}, 矩形: x=${rectX.toFixed(2)}, y=${rectY.toFixed(2)}, w=${w}, h=${h}`);
+                        mapManager.registerScope(Number(boundID), worldRectX, worldRectY, finalWidth, finalHeight);
+                        console.log(`[Map] 注册 ViewZone ID: ${boundID}, 世界坐标: x=${worldRectX.toFixed(2)}, y=${worldRectY.toFixed(2)}, w=${finalWidth}, h=${finalHeight}`);
                     }
                 }
                 continue; // 处理完 ViewZone 直接跳过后续 Prefab 生成

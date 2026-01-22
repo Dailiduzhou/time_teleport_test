@@ -25,6 +25,14 @@ export class CameraFollow extends Component {
     @property({ tooltip: "望远镜模式下的移动速度"})
     panSpeed: number = 500;
 
+    @property({
+        tooltip: "望远镜模式初始位置（0=左下角，1=右下角）",
+        min: 0,
+        max: 1,
+        step: 1
+    })
+    telescopeStartPosition: number = 0; // 0: 左下角, 1: 右下角
+
     private _state: CameraState = CameraState.FOLLOW_PLAYER;
     private _viewSize: math.Size = new math.Size();
     private _targetPos: Vec3 = new Vec3(); // 目标最终位置
@@ -152,21 +160,36 @@ export class CameraFollow extends Component {
             minY = maxY = centerY;
         }
 
-        // 将相机初始化到 ViewZone 的中心（在限制范围内）
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
+        // 根据配置选择相机初始位置（确保玩家在画面内）
+        let initX: number;
+        let initY: number;
+        const positionName = this.telescopeStartPosition === 0 ? "左下角" : "右下角";
 
-        // 获取当前相机的 z 坐标
+        if (this.telescopeStartPosition === 0) {
+            // 左下角：相机对准 ViewZone 左下区域
+            initX = minX;  // 最左侧
+            initY = minY;  // 最底部
+        } else {
+            // 右下角：相机对准 ViewZone 右下区域
+            initX = maxX;  // 最右侧
+            initY = minY;  // 最底部
+        }
+
+        console.log(`[Camera] 初始位置配置: ${positionName}`);
+        console.log(`[Camera] Clamp 范围: minX=${minX.toFixed(1)}, maxX=${maxX.toFixed(1)}, minY=${minY.toFixed(1)}, maxY=${maxY.toFixed(1)}`);
+
+        // 获取当前相机的 z 坐标并设置到初始位置
         this.node.getWorldPosition(this._targetPos);
-        this._targetPos.x = centerX;
-        this._targetPos.y = centerY;
+        this._targetPos.x = initX;
+        this._targetPos.y = initY;
+        // 【重要】立即更新相机的世界位置
+        this.node.setWorldPosition(this._targetPos);
 
         // 清空输入方向
         this._telescopeInputDir.set(0, 0, 0);
 
         console.log(`[Camera] 进入望远镜模式，bounds: x=${bounds.x.toFixed(1)}, y=${bounds.y.toFixed(1)}, w=${bounds.width}, h=${bounds.height}`);
-        console.log(`[Camera] 相机初始化到中心: (${centerX.toFixed(1)}, ${centerY.toFixed(1)})`);
-        console.log(`[Camera] 限制范围: minX=${minX.toFixed(1)}, maxX=${maxX.toFixed(1)}, minY=${minY.toFixed(1)}, maxY=${maxY.toFixed(1)}`);
+        console.log(`[Camera] 相机初始化到${positionName}: (${initX.toFixed(1)}, ${initY.toFixed(1)})`);
     }
 
     public exitTelescopeMode() {
