@@ -210,15 +210,35 @@ export class LevelMapManager extends Component {
                     let rectX = centerX - w / 2;
                     let rectY = centerY - h / 2;
 
-                    // 【重要修正】让 ViewZone 以地图中心为基准，获得最大的 Y 轴活动范围
-                    // 相机半高为 360 (720/2)，所以 ViewZone 高度至少需要 1440 (360*4) 才能让相机在中心时上下活动范围相等
-                    const mapCenterY = 0; // 地图中心 Y 坐标
-                    const desiredViewZoneHeight = 1440; // 期望的 ViewZone 高度 (至少 1440 以支持相机半高 360)
-                    const desiredViewZoneWidth = 1600; // 期望的 ViewZone 宽度
+                    // 【重要修正】让 ViewZone 与地图内容对齐
+                    // 使用与 CameraFollow.calculateMapBounds() 相同的计算方式
+                    // 确保地图内容的实际边界与 ViewZone 边界对齐
+                    const tiledMapWorldPos = this.tiledMap.node.getWorldPosition();
+                    const mapUITrans = this.tiledMap.node.getComponent(UITransform);
+                    const mapSize = mapUITrans.contentSize;
+                    const mapAnchor = mapUITrans.anchorPoint;
 
-                    // 以地图中心创建新的 ViewZone
-                    const newRectX = mapCenterY - desiredViewZoneWidth / 2;
+                    // 计算地图实际内容的边界（与 CameraFollow 相同的公式）
+                    const mapLeft = tiledMapWorldPos.x - (mapSize.width * mapAnchor.x);
+                    const mapBottom = tiledMapWorldPos.y - (mapSize.height * mapAnchor.y);
+                    const mapRight = mapLeft + mapSize.width;
+                    const mapTop = mapBottom + mapSize.height;
+
+                    console.log(`[ViewZone] 地图实际边界: left=${mapLeft}, right=${mapRight}, bottom=${mapBottom}, top=${mapTop}`);
+
+                    // 【关键】限制 ViewZone 高度不超过地图高度，避免显示黑边
+                    // 如果 ViewZone 高度大于地图高度，使用地图高度
+                    const desiredViewZoneHeight = Math.min(1440, mapSize.height);
+                    const desiredViewZoneWidth = Math.min(1600, mapSize.width);
+
+                    // 以地图内容中心为基准，创建 ViewZone
+                    const mapCenterX = (mapLeft + mapRight) / 2;
+                    const mapCenterY = (mapBottom + mapTop) / 2;
+
+                    const newRectX = mapCenterX - desiredViewZoneWidth / 2;
                     const newRectY = mapCenterY - desiredViewZoneHeight / 2;
+
+                    console.log(`[ViewZone] 修正后尺寸: ${desiredViewZoneWidth}x${desiredViewZoneHeight} (原预期: 1600x1440)`);
 
                     console.warn(`[ViewZone] 重新定位：从 (${rectX.toFixed(1)}, ${rectY.toFixed(1)}, ${w}, ${h}) 改为 (${newRectX.toFixed(1)}, ${newRectY.toFixed(1)}, ${desiredViewZoneWidth}, ${desiredViewZoneHeight})`);
                     console.log(`[ViewZone] 原位置偏离地图中心 ${Math.abs(centerY).toFixed(1)} 像素，已自动修正`);
@@ -232,20 +252,14 @@ export class LevelMapManager extends Component {
 
                     console.log(`[ViewZone矩形] rectX=${rectX.toFixed(2)}, rectY=${rectY.toFixed(2)}, 最终范围: [${rectY.toFixed(1)}, ${(rectY + finalHeight).toFixed(1)}]`);
 
-                    // 【重要】将局部坐标转换为世界坐标
-                    // TiledMap 可能挂载在偏移的父节点下，需要加上父节点的世界坐标
-                    const tiledMapWorldPos = this.tiledMap.node.getWorldPosition();
-                    const worldRectX = rectX + tiledMapWorldPos.x;
-                    const worldRectY = rectY + tiledMapWorldPos.y;
-
-                    console.log(`[ViewZone坐标转换] TiledMap世界坐标=(${tiledMapWorldPos.x.toFixed(1)}, ${tiledMapWorldPos.y.toFixed(1)})`);
-                    console.log(`[ViewZone坐标转换] 局部:(${rectX.toFixed(1)}, ${rectY.toFixed(1)}) -> 世界:(${worldRectX.toFixed(1)}, ${worldRectY.toFixed(1)})`);
+                    // newRectX/newRectY 已经是世界坐标，直接注册
+                    console.log(`[ViewZone] 使用世界坐标: (${newRectX.toFixed(1)}, ${newRectY.toFixed(1)})`);
 
                     // 获取 MapManager 并注册（使用世界坐标）
                     const mapManager = this.getComponent(LevelMapManager);
                     if (mapManager) {
-                        mapManager.registerScope(Number(boundID), worldRectX, worldRectY, finalWidth, finalHeight);
-                        console.log(`[Map] 注册 ViewZone ID: ${boundID}, 世界坐标: x=${worldRectX.toFixed(2)}, y=${worldRectY.toFixed(2)}, w=${finalWidth}, h=${finalHeight}`);
+                        mapManager.registerScope(Number(boundID), newRectX, newRectY, finalWidth, finalHeight);
+                        console.log(`[Map] 注册 ViewZone ID: ${boundID}, 世界坐标: x=${newRectX.toFixed(2)}, y=${newRectY.toFixed(2)}, w=${finalWidth}, h=${finalHeight}`);
                     }
                 }
                 continue; // 处理完 ViewZone 直接跳过后续 Prefab 生成

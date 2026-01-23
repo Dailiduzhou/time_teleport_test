@@ -187,7 +187,7 @@
     "_priority": 1,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 503.4466588511137,
+    "_orthoHeight": 417.16295427901525,
     "_near": 0,
     "_far": 2000,
     "_color": {
@@ -243,6 +243,7 @@
       "z": 0
     },
     "panSpeed": 500,
+    "telescopeStartPosition": 0,
     "_id": "ddiMyDXSRE0a3vSVDOoFaa"
   },
   {
